@@ -3,8 +3,7 @@ from fastapi import APIRouter, Depends, HTTPException, status  # FastAPI相关�
 from sqlalchemy.orm import Session  # 数据库会话
 
 # 导入项目内部模块
-import sys
-sys.path.append('/Users/heqiang/my_project/ai_assistant_back')
+
 from database import get_db  # 数据库会话依赖
 from database import get_db  # 数据库会话依赖
 from models import User  # 数据模型

@@ -5,8 +5,7 @@ import os  # 操作系统功能
 import tempfile  # 临时文件处理
 
 # 导入项目内部模块
-import sys
-sys.path.append('/Users/heqiang/my_project/ai_assistant_back')
+
 from database import get_db  # 数据库会话依赖
 from models import User  # 用户模型
 from utils import get_current_user  # 用户认证依赖

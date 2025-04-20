@@ -8,8 +8,7 @@ import requests  # HTTP请求
 from pydantic import BaseModel  # 数据验证
 
 # 导入项目内部模块
-import sys
-sys.path.append('/Users/heqiang/my_project/ai_assistant_back')
+
 from config import SECRET_KEY, ALGORITHM, ACCESS_TOKEN_EXPIRE_MINUTES, WECHAT_APPID, WECHAT_SECRET, WECHAT_LOGIN_URL  # 配置
 from database import get_db  # 数据库依赖
 from models import User, UserSettings  # 数据模型
