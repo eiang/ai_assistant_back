@@ -1,0 +1,154 @@
+# 导入必要的模块
+from fastapi import APIRouter, Depends, HTTPException, status  # FastAPI相关组件
+from sqlalchemy.orm import Session  # 数据库会话
+from typing import Optional  # 类型提示
+from pydantic import BaseModel  # 数据验证
+from datetime import datetime  # 日期时间处理
+import uuid  # 生成唯一标识符
+import json  # 用于解析JSON数据
+
+# 导入项目内部模块
+
+from database import get_db  # 数据库会话依赖
+from models import User, ChatSession, ChatMessage  # 数据模型
+from routers.chatwithdeepseek import get_deepseek_client
+from utils import get_current_user  # 用户认证依赖
+
+# 创建路由器
+router = APIRouter()
+
+# 发送消息请求模型
+class MessageRequest(BaseModel):
+    """发送消息请求数据模型
+    
+    Attributes:
+        content: 消息内容
+        sessionId: 会话ID，可选，如果不提供则创建新会话
+    """
+    content: str  # 消息内容
+    sessionId: Optional[str] = None  # 会话ID，可选
+
+# 发送消息接口
+@router.post("/message")
+async def send_message(request: MessageRequest, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    """发送消息接口
+    
+    处理用户发送的消息，获取AI回复并保存对话记录
+    
+    Args:
+        request: 消息请求数据
+        current_user: 当前认证用户，由get_current_user依赖项提供
+        db: 数据库会话，由get_db依赖项提供
+        
+    Returns:
+        dict: 包含会话ID、消息ID和AI回复的响应
+        
+    Raises:
+        HTTPException: 当指定的会话不存在时抛出404错误
+    """
+    # 获取或创建会话
+    session = None
+    if request.sessionId:
+        # 如果提供了会话ID，查找该会话
+        session = db.query(ChatSession).filter(
+            ChatSession.id == request.sessionId,
+            ChatSession.user_id == current_user.id  # 确保会话属于当前用户
+        ).first()
+        
+        if not session:
+            raise HTTPException(status_code=404, detail="会话不存在")
+    else:
+        # 如果没有提供会话ID，创建新会话
+        session = ChatSession(user_id=current_user.id)
+        db.add(session)  # 添加到数据库会话
+        db.commit()  # 提交事务
+        db.refresh(session)  # 刷新对象
+    
+    # 创建用户消息记录
+    user_message = ChatMessage(
+        session_id=session.id,
+        is_user=True,  # 标记为用户消息
+        content=request.content
+    )
+    db.add(user_message)  # 添加到数据库会话
+    db.commit()  # 提交事务
+    db.refresh(user_message)  # 刷新对象
+    
+    # 这里应该调用AI服务获取回复
+    # 在实际应用中，可能需要调用OpenAI API或其他AI服务
+    ai_reply = "这是AI的回复。在实际应用中，这里应该调用AI服务获取真实回复。"
+    
+    # 创建AI回复消息记录
+    ai_message = ChatMessage(
+        session_id=session.id,
+        is_user=False,  # 标记为AI消息
+        content=ai_reply
+    )
+    db.add(ai_message)  # 添加到数据库会话
+    db.commit()  # 提交事务
+    db.refresh(ai_message)  # 刷新对象
+    
+    # 更新会话最后更新时间
+    session.updated_at = datetime.utcnow()
+    db.commit()  # 提交事务
+    
+    # 返回响应
+    return {
+        "code": 200,
+        "message": "success",
+        "data": {
+            "sessionId": session.id,  # 会话ID
+            "messageId": ai_message.id,  # 消息ID
+            "reply": {
+                "content": ai_message.content,  # AI回复内容
+                "time": ai_message.created_at.isoformat()  # 格式化创建时间
+            }
+        }
+    }
+
+@router.get("/chatAi")
+async def chat_ai(message: str):
+    """
+    使用deepseek api回复消息
+    
+    Args:
+        message: 用户发送的消息内容
+        
+    Returns:
+        dict: 包含AI回复的响应
+    """
+    try:
+        # 记录接收到的参数
+        print(f"接收到的消息参数: {message}")
+        
+        if not message:
+            print("消息内容为空")
+            return {
+                "code": 400,
+                "message": "消息内容不能为空",
+                "data": None
+            }
+            
+        response = get_deepseek_client(message)
+        print(f"AI响应: {response}")
+        
+        if response:
+            return {
+                "code": 200,
+                "message": "success",
+                "data": response
+            }
+        else:
+            return {
+                "code": 500,
+                "message": "error",
+                "data": "deepseek 回复失败"
+            }
+    except Exception as e:
+        print(f"处理AI聊天请求时出错: {str(e)}")
+        return {
+            "code": 500,
+            "message": "error",
+            "data": f"处理请求失败: {str(e)}"
+        }
+   
