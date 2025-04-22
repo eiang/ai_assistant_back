@@ -6,12 +6,13 @@ from pydantic import BaseModel  # 数据验证
 from datetime import datetime  # 日期时间处理
 import uuid  # 生成唯一标识符
 import json  # 用于解析JSON数据
+from fastapi.responses import JSONResponse  # 用于返回JSON响应
 
 # 导入项目内部模块
 
 from database import get_db  # 数据库会话依赖
 from models import User, ChatSession, ChatMessage  # 数据模型
-from routers.chatwithdeepseek import get_deepseek_client
+from routers.chatwithdeepseek import deepseek_optimize_prompt, get_deepseek_client, text2image, test_text2image_connection
 from utils import get_current_user  # 用户认证依赖
 
 # 创建路由器
@@ -151,4 +152,27 @@ async def chat_ai(message: str):
             "message": "error",
             "data": f"处理请求失败: {str(e)}"
         }
-   
+    
+
+@router.get("/text2imagewithdeepseek")
+async def text2imagewithdeepseek(message: str):
+    """
+    生成图片的接口
+    """
+    try:
+        response = text2image(message)
+        return JSONResponse(content={"result": response})
+    except Exception as e:
+        return HTTPException(status_code=500, detail=str(e))
+
+# 添加测试API连接的端点
+@router.get("/test-text2image-connection")
+async def test_image_connection():
+    """
+    测试Text2Image API连接的接口
+    """
+    try:
+        result = test_text2image_connection()
+        return JSONResponse(content=result)
+    except Exception as e:
+        return HTTPException(status_code=500, detail=str(e))
