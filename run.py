@@ -32,8 +32,12 @@ def main():
         else:
             print(f"将使用默认配置文件 .env")
     
-    # 启动服务
-    subprocess.run(["python", "main.py"])
+    # 获取当前Python解释器路径
+    python_executable = sys.executable
+    print(f"使用Python解释器: {python_executable}")
+    
+    # 启动服务，使用当前Python解释器
+    subprocess.run([python_executable, "main.py"])
 
 if __name__ == "__main__":
     main() 
