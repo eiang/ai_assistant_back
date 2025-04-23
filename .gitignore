@@ -56,3 +56,7 @@ Thumbs.db
 .langchain.conf
 .cache/
 secrets.json
+
+
+# 特定文件
+*.code-workspace
