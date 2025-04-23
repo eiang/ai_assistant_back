@@ -160,10 +160,47 @@ async def text2imagewithdeepseek(message: str):
     生成图片的接口
     """
     try:
+        print(f"收到文生图请求，消息内容: '{message[:100]}...'")
         response = text2image(message)
-        return JSONResponse(content={"result": response})
+        print(f"文生图请求处理完成，返回数据长度: {len(response)}")
+        
+        # 确保返回的是有效的JSON格式
+        try:
+            import json
+            # 尝试解析response确保是有效的JSON
+            if isinstance(response, str):
+                json_obj = json.loads(response)
+                # 已经是有效的JSON字符串，直接返回
+                return JSONResponse(content={"result": response})
+            else:
+                # 如果已经是对象，转为JSON字符串
+                return JSONResponse(content={"result": json.dumps(response)})
+        except Exception as json_err:
+            print(f"JSON处理错误: {str(json_err)}")
+            # 如果不是有效的JSON，包装为错误响应
+            return JSONResponse(content={
+                "result": json.dumps({
+                    "success": False,
+                    "error": "无效的响应格式",
+                    "message": "服务器返回的数据不是有效的JSON格式"
+                })
+            })
     except Exception as e:
-        return HTTPException(status_code=500, detail=str(e))
+        print(f"文生图请求处理错误: {str(e)}")
+        import json
+        import traceback
+        error_trace = traceback.format_exc()
+        print(f"详细错误堆栈: {error_trace}")
+        return JSONResponse(
+            status_code=500,
+            content={
+                "result": json.dumps({
+                    "success": False,
+                    "error": str(e),
+                    "message": "图片生成失败，服务器内部错误"
+                })
+            }
+        )
 
 # 添加测试API连接的端点
 @router.get("/test-text2image-connection")
