@@ -300,3 +300,340 @@ def deepseek_optimize_prompt(userMessage: str):
     except Exception as e:
         print(f"DeepSeek调用错误: {str(e)}")
         return f"抱歉，我现在无法优化提示词，因为: {str(e)}"
+
+# 翻译功能的实现
+def translate_text(userMessage: str, translation_type: str):
+    """
+    根据用户选择的翻译类型（中译英或英译中）翻译文本
+    
+    Args:
+        userMessage: 用户要翻译的文本
+        translation_type: 翻译类型，可选 "中译英" 或 "英译中"
+        
+    Returns:
+        str: 翻译后的文本
+    """
+    try:
+        print(f"开始处理翻译请求 - 类型: {translation_type}, 内容: '{userMessage[:100]}...'")
+        
+        if translation_type == "翻译中译英":
+            system_prompt = """你是一个专业的中英翻译专家。请将用户输入的中文文本翻译成地道、流畅的英文。只返回翻译后的内容，不要有任何解释或额外说明。保持原文的风格和语气。"""
+        elif translation_type == "翻译英译中":
+            system_prompt = """你是一个专业的英中翻译专家。请将用户输入的英文文本翻译成地道、流畅的中文。只返回翻译后的内容，不要有任何解释或额外说明。保持原文的风格和语气。"""
+        elif translation_type == "翻译中译日":
+            system_prompt = """你是一个专业的中日翻译专家。请将用户输入的中文文本翻译成地道、流畅的日文。只返回翻译后的内容，不要有任何解释或额外说明。保持原文的风格和语气。"""
+        elif translation_type == "翻译日译中":
+            system_prompt = """你是一个专业的日中翻译专家。请将用户输入的日文文本翻译成地道、流畅的中文。只返回翻译后的内容，不要有任何解释或额外说明。保持原文的风格和语气。"""
+        elif translation_type == "翻译中译法":
+            system_prompt = """你是一个专业的法中翻译专家。请将用户输入的中文文本翻译成地道、流畅的法文。只返回翻译后的内容，不要有任何解释或额外说明。保持原文的风格和语气。"""
+        elif translation_type == "翻译法译中":
+            system_prompt = """你是一个专业的法中翻译专家。请将用户输入的法文文本翻译成地道、流畅的中文。只返回翻译后的内容，不要有任何解释或额外说明。保持原文的风格和语气。"""
+        else:
+            return f"不支持的翻译类型: {translation_type}"
+        
+        llm = ChatDeepSeek(
+            model=MODEL_NAME,
+            temperature=0.2  # 使用较低的温度值保证翻译的准确性
+        )
+        
+        messages = [
+            SystemMessage(content=system_prompt),
+            HumanMessage(content=userMessage)
+        ]
+        
+        response = llm.invoke(messages)
+        translated_text = response.content
+        
+        print(f"翻译完成 - 结果: '{translated_text[:100]}...'")
+        return translated_text
+        
+    except Exception as e:
+        print(f"翻译处理错误: {str(e)}")
+        return f"抱歉，翻译过程中出现错误: {str(e)}"
+
+# 评价生成功能的实现
+def generate_review(userMessage: str, review_type: str, length: str):
+    """
+    根据用户输入的关键词生成指定类型和长度的评价
+    
+    Args:
+        userMessage: 用户输入的评价对象关键词
+        review_type: 评价类型，可选 "好评" 或 "差评"
+        length: 评价字数，可选 "二十字"、"三十字"、"四十字"
+        
+    Returns:
+        str: 生成的评价文本
+    """
+    try:
+        print(f"开始处理评价生成请求 - 类型: {review_type}, 长度: {length}, 关键词: '{userMessage}'")
+        
+        # 确定字数限制
+        if length == "二十字":
+            word_limit = 20
+        elif length == "三十字":
+            word_limit = 30
+        elif length == "四十字":
+            word_limit = 40
+        else:
+            word_limit = 30  # 默认值
+        
+        # 构建系统提示
+        if review_type == "好评":
+            system_prompt = f"""你是一个专业的评价生成助手。请为用户输入的内容生成一段正面、积极的好评，体现产品/服务的优点。评价要真实可信，不要过于夸张或做作。评价字数控制在{word_limit}字左右，请只返回生成的评价内容，不要包含任何解释或额外说明。"""
+        elif review_type == "差评":
+            system_prompt = f"""你是一个专业的评价生成助手。请为用户输入的内容生成一段负面、客观的差评，指出产品/服务的不足之处。评价要具体、理性，不要无端抱怨或情绪化。评价字数控制在{word_limit}字左右，请只返回生成的评价内容，不要包含任何解释或额外说明。"""
+        else:
+            return f"不支持的评价类型: {review_type}"
+        
+        llm = ChatDeepSeek(
+            model=MODEL_NAME,
+            temperature=0.7  # 使用较高的温度值增加评价的多样性
+        )
+        
+        # 构建提示信息
+        prompt = f"请为以下内容生成{word_limit}字左右的{review_type}：{userMessage}"
+        
+        messages = [
+            SystemMessage(content=system_prompt),
+            HumanMessage(content=prompt)
+        ]
+        
+        response = llm.invoke(messages)
+        review_text = response.content
+        
+        print(f"评价生成完成 - 结果: '{review_text}'")
+        return review_text
+        
+    except Exception as e:
+        print(f"评价生成错误: {str(e)}")
+        return f"抱歉，评价生成过程中出现错误: {str(e)}"
+
+# 朋友圈文案生成功能
+def generate_friend_circle_post(userMessage: str, post_type: str, length: str):
+    """
+    根据用户输入的关键词生成指定类型和长度的朋友圈文案
+    
+    Args:
+        userMessage: 用户输入的关键词或主题
+        post_type: 文案类型，可选 "过节"、"生日"、"祝福"、"表白"、"分手"
+        length: 文案字数，可选 "二十字"、"三十字"、"四十字"
+        
+    Returns:
+        str: 生成的朋友圈文案
+    """
+    try:
+        print(f"开始处理朋友圈文案生成请求 - 类型: {post_type}, 长度: {length}, 关键词: '{userMessage}'")
+        
+        # 确定字数限制
+        if length == "二十字":
+            word_limit = 20
+        elif length == "三十字":
+            word_limit = 30
+        elif length == "四十字":
+            word_limit = 40
+        else:
+            word_limit = 30  # 默认值
+        
+        # 构建系统提示
+        prompts = {
+            "过节": f"""你是一个社交媒体文案专家。请为用户输入的节日生成一条朋友圈文案，文案应当简洁有力，能够表达节日的喜悦氛围，字数控制在{word_limit}字左右。请只返回生成的文案内容，不要包含任何解释或额外说明。""",
+            "生日": f"""你是一个社交媒体文案专家。请根据用户输入生成一条关于生日的朋友圈文案，文案应当温馨感人，能够表达对自己或他人生日的祝福，字数控制在{word_limit}字左右。请只返回生成的文案内容，不要包含任何解释或额外说明。""",
+            "祝福": f"""你是一个社交媒体文案专家。请根据用户输入生成一条祝福类朋友圈文案，文案应当真挚诚恳，能够传达美好的祝愿，字数控制在{word_limit}字左右。请只返回生成的文案内容，不要包含任何解释或额外说明。""",
+            "表白": f"""你是一个社交媒体文案专家。请根据用户输入生成一条表白类朋友圈文案，文案应当浪漫感人，能够表达真挚的爱意，字数控制在{word_limit}字左右。请只返回生成的文案内容，不要包含任何解释或额外说明。""",
+            "分手": f"""你是一个社交媒体文案专家。请根据用户输入生成一条关于分手或失恋的朋友圈文案，文案应当伤感但不过度悲观，能够表达对过去感情的告别，字数控制在{word_limit}字左右。请只返回生成的文案内容，不要包含任何解释或额外说明。"""
+        }
+        
+        system_prompt = prompts.get(post_type, f"你是一个社交媒体文案专家。请生成一条朋友圈文案，字数控制在{word_limit}字左右。")
+        
+        llm = ChatDeepSeek(
+            model=MODEL_NAME,
+            temperature=0.7  # 使用较高的温度值增加文案的创意性
+        )
+        
+        # 构建提示信息
+        prompt = f"请根据关键词「{userMessage}」，为我创作一条{post_type}场景的朋友圈文案，字数控制在{word_limit}字左右。"
+        
+        messages = [
+            SystemMessage(content=system_prompt),
+            HumanMessage(content=prompt)
+        ]
+        
+        response = llm.invoke(messages)
+        post_text = response.content
+        
+        print(f"朋友圈文案生成完成 - 结果: '{post_text}'")
+        return post_text
+        
+    except Exception as e:
+        print(f"朋友圈文案生成错误: {str(e)}")
+        return f"抱歉，朋友圈文案生成过程中出现错误: {str(e)}"
+
+# 小红书文案生成功能
+def generate_xiaohongshu_post(userMessage: str, post_type: str, length: str):
+    """
+    根据用户输入的关键词生成指定类型和长度的小红书文案
+    
+    Args:
+        userMessage: 用户输入的关键词或主题
+        post_type: 文案类型，可选 "种草"、"吐槽"、"分享"、"暗广"
+        length: 文案字数，可选 "五十字"、"一百字"、"二百字"
+        
+    Returns:
+        str: 生成的小红书文案
+    """
+    try:
+        print(f"开始处理小红书文案生成请求 - 类型: {post_type}, 长度: {length}, 关键词: '{userMessage}'")
+        
+        # 确定字数限制
+        if length == "五十字":
+            word_limit = 50
+        elif length == "一百字":
+            word_limit = 100
+        elif length == "二百字":
+            word_limit = 200
+        else:
+            word_limit = 100  # 默认值
+        
+        # 构建系统提示
+        prompts = {
+            "种草": f"""你是一个小红书文案专家。请为用户输入的产品或服务生成一条种草类小红书文案，文案应当真实可信，包含产品亮点和个人使用感受，语气要亲切自然，带有惊喜感，字数控制在{word_limit}字左右。请加入合适的表情符号和排版，但不要过多。请只返回生成的文案内容，不要包含任何解释或额外说明。""",
+            "吐槽": f"""你是一个小红书文案专家。请根据用户输入生成一条吐槽类小红书文案，文案应当幽默诙谐，带有一定的批判性但不要过于尖刻，语气要生活化，字数控制在{word_limit}字左右。请加入合适的表情符号和排版，但不要过多。请只返回生成的文案内容，不要包含任何解释或额外说明。""",
+            "分享": f"""你是一个小红书文案专家。请根据用户输入生成一条分享类小红书文案，文案应当详实有用，提供有价值的信息或经验，语气要真诚，字数控制在{word_limit}字左右。请加入合适的表情符号和排版，但不要过多。请只返回生成的文案内容，不要包含任何解释或额外说明。""",
+            "暗广": f"""你是一个小红书文案专家。请根据用户输入生成一条巧妙融入产品推广的小红书文案，文案应当不显刻意，将产品自然地融入内容中，语气要轻松自然，字数控制在{word_limit}字左右。请加入合适的表情符号和排版，但不要过多。请只返回生成的文案内容，不要包含任何解释或额外说明。"""
+        }
+        
+        system_prompt = prompts.get(post_type, f"你是一个小红书文案专家。请生成一条小红书文案，字数控制在{word_limit}字左右。")
+        
+        llm = ChatDeepSeek(
+            model=MODEL_NAME,
+            temperature=0.8  # 使用较高的温度值增加文案的多样性和创意性
+        )
+        
+        # 构建提示信息
+        prompt = f"请为「{userMessage}」创作一篇{post_type}类型的小红书文案，字数约{word_limit}字。加入适量表情符号和排版，使文案生动有趣。"
+        
+        messages = [
+            SystemMessage(content=system_prompt),
+            HumanMessage(content=prompt)
+        ]
+        
+        response = llm.invoke(messages)
+        post_text = response.content
+        
+        print(f"小红书文案生成完成 - 结果前100字: '{post_text[:100]}...'")
+        return post_text
+        
+    except Exception as e:
+        print(f"小红书文案生成错误: {str(e)}")
+        return f"抱歉，小红书文案生成过程中出现错误: {str(e)}"
+
+# 砍价话术生成功能
+def generate_bargain_script(userMessage: str, product_type: str, length: str):
+    """
+    根据用户输入生成砍价话术
+    
+    Args:
+        userMessage: 用户输入的具体商品或场景
+        product_type: 产品类型，如"衣服"、"鞋子"、"包包"等
+        length: 话术字数，可选 "二十字"、"三十字"、"四十字"
+        
+    Returns:
+        str: 生成的砍价话术
+    """
+    try:
+        print(f"开始处理砍价话术生成请求 - 类型: {product_type}, 长度: {length}, 关键词: '{userMessage}'")
+        
+        # 确定字数限制
+        if length == "二十字":
+            word_limit = 20
+        elif length == "三十字":
+            word_limit = 30
+        elif length == "四十字":
+            word_limit = 40
+        else:
+            word_limit = 30  # 默认值
+        
+        # 构建系统提示
+        prompts = {
+            "衣服": f"""你是一个砍价话术专家。请为用户购买衣服场景生成一条砍价话术，话术应当有理有据，不卑不亢，能够委婉表达降价意愿，字数控制在{word_limit}字左右。请只返回生成的话术内容，不要包含任何解释或额外说明。""",
+            "鞋子": f"""你是一个砍价话术专家。请为用户购买鞋子场景生成一条砍价话术，话术应当有理有据，不卑不亢，能够委婉表达降价意愿，字数控制在{word_limit}字左右。请只返回生成的话术内容，不要包含任何解释或额外说明。""",
+            "包包": f"""你是一个砍价话术专家。请为用户购买包包场景生成一条砍价话术，话术应当有理有据，不卑不亢，能够委婉表达降价意愿，字数控制在{word_limit}字左右。请只返回生成的话术内容，不要包含任何解释或额外说明。""",
+            "化妆品": f"""你是一个砍价话术专家。请为用户购买化妆品场景生成一条砍价话术，话术应当有理有据，不卑不亢，能够委婉表达降价意愿，字数控制在{word_limit}字左右。请只返回生成的话术内容，不要包含任何解释或额外说明。""",
+            "数码产品": f"""你是一个砍价话术专家。请为用户购买数码产品场景生成一条砍价话术，话术应当有理有据，不卑不亢，能够委婉表达降价意愿，字数控制在{word_limit}字左右。请只返回生成的话术内容，不要包含任何解释或额外说明。""",
+            "闲鱼转转二手": f"""你是一个砍价话术专家。请为用户在二手平台购物场景生成一条砍价话术，话术应当有理有据，不卑不亢，能够委婉表达降价意愿，字数控制在{word_limit}字左右。请只返回生成的话术内容，不要包含任何解释或额外说明。"""
+        }
+        
+        system_prompt = prompts.get(product_type, f"你是一个砍价话术专家。请生成一条砍价话术，字数控制在{word_limit}字左右。")
+        
+        llm = ChatDeepSeek(
+            model=MODEL_NAME,
+            temperature=0.6  # 使用适中的温度值，保证话术的实用性
+        )
+        
+        # 构建提示信息
+        prompt = f"请为我想购买的「{userMessage}」({product_type}类商品)生成一条砍价话术，字数控制在{word_limit}字左右。话术要委婉有效，不卑不亢。"
+        
+        messages = [
+            SystemMessage(content=system_prompt),
+            HumanMessage(content=prompt)
+        ]
+        
+        response = llm.invoke(messages)
+        bargain_text = response.content
+        
+        print(f"砍价话术生成完成 - 结果: '{bargain_text}'")
+        return bargain_text
+        
+    except Exception as e:
+        print(f"砍价话术生成错误: {str(e)}")
+        return f"抱歉，砍价话术生成过程中出现错误: {str(e)}"
+
+# 做菜达人功能
+def generate_cooking_recipe(ingredients: str):
+    """
+    根据用户提供的食材生成一道菜的做法
+    
+    Args:
+        ingredients: 用户提供的食材列表，以逗号分隔
+        
+    Returns:
+        str: 生成的菜谱和烹饪方法
+    """
+    try:
+        print(f"开始处理做菜达人请求 - 食材: '{ingredients}'")
+        
+        # 构建系统提示
+        system_prompt = """你是一位专业的中式烹饪大师。
+请根据用户提供的食材，创造一道美味可口的菜肴。
+你的回答应包含以下内容：
+1. 菜名：为这道菜起一个吸引人的名字 🍽️
+2. 主要食材：列出用户提供的食材 🥬
+3. 辅助食材：推荐一些常见的配料和调味料（如果用户没有提到）🧂
+4. 烹饪步骤：详细的步骤指导，包括火候、时间等关键信息 🔥
+5. 烹饪小贴士：分享1-2个能提升这道菜口感的专业技巧 💡
+6. 最终效果：描述一下这道菜理想的口感和风味 👨‍🍳
+
+生成的文字格式为文本加手机emoji，回答要详细专业，但语言要通俗易懂，让普通家庭也能轻松完成。"""
+        
+        llm = ChatDeepSeek(
+            model=MODEL_NAME,
+            temperature=0.7  # 使用较高的温度值增加菜谱的创意性
+        )
+        
+        # 构建提示信息
+        prompt = f"我有这些食材：{ingredients}。请教我用这些食材做一道美味的菜，提供详细的步骤和技巧。"
+        
+        messages = [
+            SystemMessage(content=system_prompt),
+            HumanMessage(content=prompt)
+        ]
+        
+        response = llm.invoke(messages)
+        recipe_text = response.content
+        
+        print(f"菜谱生成完成 - 结果前100字: '{recipe_text[:100]}...'")
+        return recipe_text
+        
+    except Exception as e:
+        print(f"菜谱生成错误: {str(e)}")
+        return f"抱歉，菜谱生成过程中出现错误: {str(e)}"

@@ -108,12 +108,14 @@ async def send_message(request: MessageRequest, current_user: User = Depends(get
     }
 
 @router.get("/chatAi")
-async def chat_ai(message: str):
+async def chat_ai(message: str, functionType: str = None, functionValue: str = None):
     """
-    使用deepseek api回复消息
+    使用deepseek api回复消息，支持额外功能（翻译、评价生成、朋友圈文案、小红书文案、砍价话术）
     
     Args:
         message: 用户发送的消息内容
+        functionType: 功能类型，如"翻译中译英"、"评价好评"、"朋友圈生日"等
+        functionValue: 功能附加值，如评价功能中的字数要求："二十字"、"三十字"等
         
     Returns:
         dict: 包含AI回复的响应
@@ -121,6 +123,7 @@ async def chat_ai(message: str):
     try:
         # 记录接收到的参数
         print(f"接收到的消息参数: {message}")
+        print(f"功能类型: {functionType}, 功能值: {functionValue}")
         
         if not message:
             print("消息内容为空")
@@ -129,8 +132,49 @@ async def chat_ai(message: str):
                 "message": "消息内容不能为空",
                 "data": None
             }
+        
+        # 根据是否启用附加功能决定处理方式
+        if functionType:
+            print(f"使用附加功能: {functionType}")
             
-        response = get_deepseek_client(message)
+            # 翻译功能
+            if functionType.startswith("翻译"):
+                from routers.chatwithdeepseek import translate_text
+                response = translate_text(message, functionType)
+                
+            # 评价功能
+            elif functionType.startswith("评价"):
+                from routers.chatwithdeepseek import generate_review
+                response = generate_review(message, functionType[2:], functionValue)
+                
+            # 朋友圈文案功能
+            elif functionType.startswith("朋友圈"):
+                from routers.chatwithdeepseek import generate_friend_circle_post
+                response = generate_friend_circle_post(message, functionType[3:], functionValue)
+                
+            # 小红书文案功能
+            elif functionType.startswith("小红书"):
+                from routers.chatwithdeepseek import generate_xiaohongshu_post
+                response = generate_xiaohongshu_post(message, functionType[3:], functionValue)
+                
+            # 砍价话术功能
+            elif functionType.startswith("砍价"):
+                from routers.chatwithdeepseek import generate_bargain_script
+                response = generate_bargain_script(message, functionType[2:], functionValue)
+                
+            # 做菜达人功能
+            elif functionType.startswith("做菜达人"):
+                from routers.chatwithdeepseek import generate_cooking_recipe
+                response = generate_cooking_recipe(message)
+                
+            # 不支持的功能类型
+            else:
+                response = f"不支持的功能类型: {functionType}"
+                
+        # 无附加功能，使用常规AI回复
+        else:
+            response = get_deepseek_client(message)
+            
         print(f"AI响应: {response}")
         
         if response:
@@ -143,10 +187,13 @@ async def chat_ai(message: str):
             return {
                 "code": 500,
                 "message": "error",
-                "data": "deepseek 回复失败"
+                "data": "AI回复失败"
             }
     except Exception as e:
         print(f"处理AI聊天请求时出错: {str(e)}")
+        import traceback
+        error_trace = traceback.format_exc()
+        print(f"详细错误堆栈: {error_trace}")
         return {
             "code": 500,
             "message": "error",
