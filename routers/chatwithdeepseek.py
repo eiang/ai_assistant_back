@@ -378,9 +378,9 @@ def generate_review(userMessage: str, review_type: str, length: str):
             word_limit = 30  # 默认值
         
         # 构建系统提示
-        if review_type == "好评":
+        if review_type.startswith("好评"):
             system_prompt = f"""你是一个专业的评价生成助手。请为用户输入的内容生成一段正面、积极的好评，体现产品/服务的优点。评价要真实可信，不要过于夸张或做作。评价字数控制在{word_limit}字左右，请只返回生成的评价内容，不要包含任何解释或额外说明。"""
-        elif review_type == "差评":
+        elif review_type.startswith("差评"):
             system_prompt = f"""你是一个专业的评价生成助手。请为用户输入的内容生成一段负面、客观的差评，指出产品/服务的不足之处。评价要具体、理性，不要无端抱怨或情绪化。评价字数控制在{word_limit}字左右，请只返回生成的评价内容，不要包含任何解释或额外说明。"""
         else:
             return f"不支持的评价类型: {review_type}"
